@@ -13,32 +13,38 @@ async function loadModel() {
     } catch (err) {
         console.error("Model failed to load:", err);
         document.getElementById("label").innerText = "Error loading model!";
+        document.title = "ERROR";
     }
 }
 
 async function predict(imgElement) {
     if (!model) {
         document.getElementById("label").innerText = "Model not loaded!";
+        document.title = "ERROR";
         return;
     }
 
     try {
         const prediction = await model.predict(imgElement);
 
-        // find the class with the highest probability
-        let best = prediction[0];
-        for (let i = 1; i < prediction.length; i++) {
-            if (prediction[i].probability > best.probability) {
-                best = prediction[i];
-            }
-        }
+        // Find the best class
+        let best = prediction.reduce((a, b) =>
+            a.probability > b.probability ? a : b
+        );
 
-        document.getElementById("label").innerText =
-            `${best.className} (${best.probability.toFixed(3)})`;
+        const resultText =
+            `${best.className} (${(best.probability * 100).toFixed(1)}%)`;
+
+        // Show on webpage
+        document.getElementById("label").innerText = resultText;
+
+        // 🔥 SEND RESULT TO APP INVENTOR VIA PAGE TITLE
+        document.title = best.className;
 
     } catch (err) {
         console.error("Prediction error:", err);
         document.getElementById("label").innerText = "Prediction failed!";
+        document.title = "ERROR";
     }
 }
 
@@ -55,5 +61,5 @@ document.getElementById("imageInput").addEventListener("change", function (evt) 
     };
 });
 
-// Load model on page load
+// Load model on startup
 loadModel();
