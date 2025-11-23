@@ -1,11 +1,13 @@
-let model, metadata;
-const modelPath = "model/model.json";
-const metadataPath = "model/metadata.json";
+let model;
+let maxPredictions;
 
 async function loadModel() {
-    model = await tf.loadLayersModel(modelPath);
-    const response = await fetch(metadataPath);
-    metadata = await response.json();
+    const modelURL = "model/model.json";
+    const metadataURL = "model/metadata.json";
+
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
     console.log("Model loaded.");
 }
 
@@ -15,26 +17,18 @@ async function predict(imgElement) {
         return;
     }
 
-    const tensor = tf.browser
-        .fromPixels(imgElement)
-        .resizeNearestNeighbor([224, 224])
-        .toFloat()
-        .div(255.0)
-        .expandDims();
+    const prediction = await model.predict(imgElement);
 
-    const prediction = await model.predict(tensor).data();
-
-    // find top class
-    let maxIndex = 0;
-    prediction.forEach((value, i) => {
-        if (value > prediction[maxIndex]) maxIndex = i;
-    });
-
-    const className = metadata.labels[maxIndex];
-    const confidence = prediction[maxIndex].toFixed(3);
+    // find the class with the highest probability
+    let best = prediction[0];
+    for (let i = 1; i < prediction.length; i++) {
+        if (prediction[i].probability > best.probability) {
+            best = prediction[i];
+        }
+    }
 
     document.getElementById("label").innerText =
-        className + " (" + confidence + ")";
+        `${best.className} (${best.probability.toFixed(3)})`;
 }
 
 document.getElementById("imageInput").addEventListener("change", function (evt) {
@@ -47,6 +41,5 @@ document.getElementById("imageInput").addEventListener("change", function (evt) 
     };
 });
 
-// Load model on startup
+// Load model on page load
 loadModel();
-
