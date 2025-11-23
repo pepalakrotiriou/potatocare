@@ -3,21 +3,28 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Potato Disease Classifier</title>
+    <title>Potato Leaf Disease Detection</title>
+
+    <!-- Teachable Machine image library -->
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <!-- TensorFlow.js (required for TM models) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+
     <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-    <h2>Potato Leaf Disease Detection</h2>
 
-    <input type="file" id="imageInput" accept="image/*">
+<body>
+    <h1>Potato Leaf Disease Detection</h1>
+
+    <input type="file" id="imageInput" accept="image/*" />
     <br><br>
 
-    <img id="preview" src="" />
+    <img id="preview" width="300" alt="Preview image" />
+    <br><br>
 
-    <div id="label">Waiting for image...</div>
+    <h2 id="label">Waiting for image…</h2>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0"></script>
     <script src="script.js"></script>
 </body>
 </html>
-
