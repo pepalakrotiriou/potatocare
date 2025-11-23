@@ -1,0 +1,18 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+}
+
+#preview {
+    width: 240px;
+    margin-top: 15px;
+    border-radius: 8px;
+}
+
+#label {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
