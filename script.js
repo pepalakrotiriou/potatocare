@@ -2,17 +2,41 @@ let model;
 let maxPredictions;
 
 async function loadModel() {
-    const modelURL = "https://pepalakrotiriou.github.io/potatocare/model/model.json";
-    const metadataURL = "https://pepalakrotiriou.github.io/potatocare/model/metadata.json";
-
-    try {
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-        console.log("Model loaded successfully.");
-        document.getElementById("label").innerText = "Model ready. Upload an image.";
-    } catch (err) {
-        console.error("Model failed to load:", err);
-        document.getElementById("label").innerText = "Error loading model!";
+    // Try BOTH locations (model/ folder and root)
+    const possiblePaths = [
+        "https://pepalakrotiriou.github.io/potatocare/model.json",
+        "https://pepalakrotiriou.github.io/potatocare/model/model.json"
+    ];
+    
+    let modelLoaded = false;
+    
+    for (const baseURL of possiblePaths) {
+        const modelURL = baseURL;
+        const metadataURL = baseURL.replace('model.json', 'metadata.json');
+        
+        console.log(`Trying to load model from: ${modelURL}`);
+        
+        try {
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+            console.log(`✅ Model loaded from: ${modelURL}`);
+            console.log(`Model has ${maxPredictions} classes`);
+            
+            // Get class names
+            const classNames = model.getClassLabels();
+            console.log("Class names:", classNames);
+            
+            document.getElementById("label").innerText = `Model ready (${maxPredictions} classes). Upload an image.`;
+            modelLoaded = true;
+            break;
+        } catch (err) {
+            console.log(`❌ Failed from ${modelURL}:`, err.message);
+        }
+    }
+    
+    if (!modelLoaded) {
+        console.error("❌ All model loading attempts failed");
+        document.getElementById("label").innerText = "Error: Could not load model from any location!";
         document.title = "ERROR";
     }
 }
@@ -25,35 +49,62 @@ async function predict(imgElement) {
     }
 
     try {
+        // Make prediction
         const prediction = await model.predict(imgElement);
-         // ADD THIS DEBUG CODE:
-        console.log("Raw prediction array:", prediction);
-        console.log("Number of classes:", prediction.length);
         
+        // DEBUG: Log everything
+        console.log("=== PREDICTION RESULTS ===");
+        console.log("Raw prediction array:", prediction);
+        
+        let resultHTML = "<h3>Prediction Results:</h3>";
+        let bestClass = "Unknown";
+        let bestProb = 0;
+        
+        // Check each class
         for (let i = 0; i < prediction.length; i++) {
-            console.log(`Class ${i}: ${prediction[i].className} = ${prediction[i].probability}`);
+            const item = prediction[i];
+            console.log(`Class ${i}:`, item);
+            
+            const className = item.className || `Class ${i}`;
+            const probability = Number(item.probability);
+            
+            console.log(`${className}: ${probability} (${probability * 100}%)`);
+            
+            // Check if probability is valid
+            if (isNaN(probability)) {
+                console.error(`⚠️ Probability for ${className} is NaN!`);
+                resultHTML += `<div style="color: red">${className}: INVALID (NaN)</div>`;
+            } else {
+                const percentage = (probability * 100).toFixed(2);
+                resultHTML += `<div>${className}: ${percentage}%</div>`;
+                
+                if (probability > bestProb) {
+                    bestProb = probability;
+                    bestClass = className;
+                }
+            }
         }
-        // END DEBUG CODE
-        // Find the best class
-        let best = prediction.reduce((a, b) =>
-            a.probability > b.probability ? a : b
-        );
-
-        const resultText = `${best.className} (${(best.probability * 100).toFixed(1)}%)`;
-
-        // Show on webpage
-        document.getElementById("label").innerText = resultText;
-
-        // 🔥 SEND RESULT TO APP INVENTOR VIA PAGE TITLE
-        document.title = best.className;
-
+        
+        // Display results
+        document.getElementById("label").innerHTML = resultHTML;
+        
+        if (bestProb > 0) {
+            const displayText = `${bestClass} (${(bestProb * 100).toFixed(1)}%)`;
+            console.log("Best result:", displayText);
+            document.title = bestClass;
+        } else {
+            console.error("No valid probabilities found!");
+            document.title = "ERROR";
+        }
+        
     } catch (err) {
-        console.error("Prediction error:", err);
-        document.getElementById("label").innerText = "Prediction failed!";
+        console.error("❌ Prediction error:", err);
+        document.getElementById("label").innerHTML = `<div style="color: red">Prediction error: ${err.message}</div>`;
         document.title = "ERROR";
     }
 }
 
+// File upload handler
 document.getElementById("imageInput").addEventListener("change", function (evt) {
     const file = evt.target.files[0];
     const img = document.getElementById("preview");
@@ -61,28 +112,15 @@ document.getElementById("imageInput").addEventListener("change", function (evt) 
     if (!file) return;
 
     img.src = URL.createObjectURL(file);
+    document.getElementById("label").innerText = "Processing image...";
 
     img.onload = function () {
         predict(img);
     };
 });
 
-// Load model on startup
-loadModel();
-// Add this test code at the end of your script.js
-setTimeout(() => {
-    if (model) {
-        console.log("Testing with a simple color...");
-        // Create a simple green test image
-        const testCanvas = document.createElement('canvas');
-        testCanvas.width = 224;
-        testCanvas.height = 224;
-        const ctx = testCanvas.getContext('2d');
-        ctx.fillStyle = 'green';
-        ctx.fillRect(0, 0, 224, 224);
-        
-        const testImg = new Image();
-        testImg.src = testCanvas.toDataURL();
-        testImg.onload = () => predict(testImg);
-    }
-}, 2000);
+// Load model when page loads
+window.addEventListener('DOMContentLoaded', (event) => {
+    console.log("Page loaded, loading model...");
+    loadModel();
+});
