@@ -69,3 +69,20 @@ document.getElementById("imageInput").addEventListener("change", function (evt) 
 
 // Load model on startup
 loadModel();
+// Add this test code at the end of your script.js
+setTimeout(() => {
+    if (model) {
+        console.log("Testing with a simple color...");
+        // Create a simple green test image
+        const testCanvas = document.createElement('canvas');
+        testCanvas.width = 224;
+        testCanvas.height = 224;
+        const ctx = testCanvas.getContext('2d');
+        ctx.fillStyle = 'green';
+        ctx.fillRect(0, 0, 224, 224);
+        
+        const testImg = new Image();
+        testImg.src = testCanvas.toDataURL();
+        testImg.onload = () => predict(testImg);
+    }
+}, 2000);
