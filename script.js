@@ -4,7 +4,6 @@ let maxPredictions;
 async function loadModel() {
     // Try BOTH locations (model/ folder and root)
     const possiblePaths = [
-        "https://pepalakrotiriou.github.io/potatocare/model.json",
         "https://pepalakrotiriou.github.io/potatocare/model/model.json"
     ];
     
