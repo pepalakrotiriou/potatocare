@@ -18,7 +18,7 @@ async function loadModel() {
         try {
             model = await tmImage.load(modelURL, metadataURL);
             maxPredictions = model.getTotalClasses();
-            console.log(`✅ Model loaded from: ${modelURL}`);
+            console.log(`Model loaded from: ${modelURL}`);
             console.log(`Model has ${maxPredictions} classes`);
             
             // Get class names
@@ -29,12 +29,12 @@ async function loadModel() {
             modelLoaded = true;
             break;
         } catch (err) {
-            console.log(`❌ Failed from ${modelURL}:`, err.message);
+            console.log(`Failed from ${modelURL}:`, err.message);
         }
     }
     
     if (!modelLoaded) {
-        console.error("❌ All model loading attempts failed");
+        console.error("All model loading attempts failed");
         document.getElementById("label").innerText = "Error: Could not load model from any location!";
         document.title = "ERROR";
     }
@@ -71,7 +71,7 @@ async function predict(imgElement) {
             
             // Check if probability is valid
             if (isNaN(probability)) {
-                console.error(`⚠️ Probability for ${className} is NaN!`);
+                console.error(`Probability for ${className} is NaN!`);
                 resultHTML += `<div style="color: red">${className}: INVALID (NaN)</div>`;
             } else {
                 const percentage = (probability * 100).toFixed(2);
@@ -97,7 +97,7 @@ async function predict(imgElement) {
         }
         
     } catch (err) {
-        console.error("❌ Prediction error:", err);
+        console.error("Prediction error:", err);
         document.getElementById("label").innerHTML = `<div style="color: red">Prediction error: ${err.message}</div>`;
         document.title = "ERROR";
     }
