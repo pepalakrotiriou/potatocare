@@ -26,7 +26,14 @@ async function predict(imgElement) {
 
     try {
         const prediction = await model.predict(imgElement);
-
+         // ADD THIS DEBUG CODE:
+        console.log("Raw prediction array:", prediction);
+        console.log("Number of classes:", prediction.length);
+        
+        for (let i = 0; i < prediction.length; i++) {
+            console.log(`Class ${i}: ${prediction[i].className} = ${prediction[i].probability}`);
+        }
+        // END DEBUG CODE
         // Find the best class
         let best = prediction.reduce((a, b) =>
             a.probability > b.probability ? a : b
