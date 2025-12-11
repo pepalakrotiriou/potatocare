@@ -32,8 +32,7 @@ async function predict(imgElement) {
             a.probability > b.probability ? a : b
         );
 
-        const resultText =
-            `${best.className} (${(best.probability * 100).toFixed(1)}%)`;
+        const resultText = `${best.className} (${(best.probability * 100).toFixed(1)}%)`;
 
         // Show on webpage
         document.getElementById("label").innerText = resultText;
