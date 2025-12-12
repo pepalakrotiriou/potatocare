@@ -91,6 +91,12 @@ async function predict(imgElement) {
             const displayText = `${bestClass} (${(bestProb * 100).toFixed(1)}%)`;
             console.log("Best result:", displayText);
             document.title = bestClass;
+            // SEND RESULT BACK TO APP INVENTOR
+            try {
+                AppInventor.setWebViewString(bestClass + ": " + (bestProb * 100).toFixed(2) + "%");
+            } catch(e) {
+                console.log("AppInventor interface not available");
+            }
         } else {
             console.error("No valid probabilities found!");
             document.title = "ERROR";
