@@ -40,6 +40,37 @@ async function loadModel() {
     }
 }
 
+// Robust sender with retries
+function sendToAppInventorWithRetry(message, maxAttempts = 10, delayMs = 300) {
+    let attempts = 0;
+
+    function trySend() {
+        attempts++;
+        try {
+            if (window.AppInventor && typeof window.AppInventor.setWebViewString === "function") {
+                window.AppInventor.setWebViewString(message);
+                console.log("Sent to AppInventor:", message, "(attempt " + attempts + ")");
+                return true;
+            } else {
+                console.log("AppInventor interface not ready (attempt " + attempts + ")");
+            }
+        } catch (err) {
+            console.log("Exception while sending to AppInventor (attempt " + attempts + "):", err);
+        }
+
+        if (attempts < maxAttempts) {
+            setTimeout(trySend, delayMs);
+        } else {
+            console.warn("Failed to send to AppInventor after " + attempts + " attempts.");
+            // fallback: update document.title so App Inventor could (optionally) poll it
+            try { document.title = message; } catch(e) {}
+        }
+    }
+
+    trySend();
+}
+
+
 async function predict(imgElement) {
     if (!model) {
         document.getElementById("label").innerText = "Model not loaded!";
@@ -87,20 +118,15 @@ async function predict(imgElement) {
         // Display results
         document.getElementById("label").innerHTML = resultHTML;
         
-        if (bestProb > 0) {
+       if (bestProb > 0) {
             const displayText = `${bestClass} (${(bestProb * 100).toFixed(1)}%)`;
             console.log("Best result:", displayText);
             document.title = bestClass;
-            // SEND RESULT BACK TO APP INVENTOR
-            try {
-                AppInventor.setWebViewString(bestClass + ": " + (bestProb * 100).toFixed(2) + "%");
-            } catch(e) {
-                console.log("AppInventor interface not available");
-            }
-        } else {
-            console.error("No valid probabilities found!");
-            document.title = "ERROR";
-        }
+
+        // Καλούμε τον σταθερό sender
+        sendToAppInventorWithRetry(bestClass + ": " + (bestProb * 100).toFixed(2) + "%");
+    }
+
         
     } catch (err) {
         console.error("Prediction error:", err);
