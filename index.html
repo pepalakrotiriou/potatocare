@@ -14,74 +14,42 @@ img { width: 250px; margin-top: 20px; }
 
 <body>
 
-<h2>Teachable Machine – App Inventor</h2>
-<div id="status">Loading model...</div>
+<h3>Teachable Machine</h3>
 <img id="preview"/>
 
 <script>
 let model;
 
-// 🔹 SEND MESSAGE BACK TO APP INVENTOR (100% reliable)
+// send result to App Inventor
 function sendToApp(msg) {
-    console.log("SEND:", msg);
+    if (window.AppInventor && window.AppInventor.setWebViewString) {
+        window.AppInventor.setWebViewString(msg);
+    }
     document.title = "RESULT:" + msg;
 }
 
-// 🔹 LOAD MODEL
+// load model
 async function loadModel() {
-    try {
-        const modelURL = "https://pepalakrotiriou.github.io/potatocare/model/model.json";
-        const metadataURL = "https://pepalakrotiriou.github.io/potatocare/model/metadata.json";
+    const modelURL = "https://pepalakrotiriou.github.io/potatocare/model/model.json";
+    const metadataURL = "https://pepalakrotiriou.github.io/potatocare/model/metadata.json";
 
-        model = await tmImage.load(modelURL, metadataURL);
-        document.getElementById("status").innerText = "Model loaded";
-        sendToApp("MODEL LOADED");
-
-    } catch (e) {
-        document.getElementById("status").innerText = "MODEL LOAD ERROR";
-        sendToApp("ERROR: MODEL LOAD FAILED");
-    }
+    model = await tmImage.load(modelURL, metadataURL);
+    sendToApp("MODEL LOADED");
 }
 
-// 🔹 RECEIVE IMAGE FROM APP INVENTOR
-window.fromAppInventor = function(base64) {
-    console.log("Image received from App Inventor");
-
+// receive IMAGE URL from App Inventor
+window.fromAppInventor = async function(imageUrl) {
     const img = document.getElementById("preview");
-    img.src = "data:image/jpeg;base64," + base64;
+    img.crossOrigin = "anonymous";
+    img.src = imageUrl;
 
-    img.onload = () => predict(img);
+    img.onload = async () => {
+        const prediction = await model.predict(img);
+
+        let best = prediction.reduce((a,b)=>a.probability>b.probability?a:b);
+        sendToApp(best.className + " " + (best.probability*100).toFixed(1) + "%");
+    };
 };
-
-// 🔹 RUN PREDICTION
-async function predict(img) {
-    if (!model) {
-        sendToApp("ERROR: MODEL NOT READY");
-        return;
-    }
-
-    try {
-        const preds = await model.predict(img);
-
-        let bestClass = "";
-        let bestProb = 0;
-
-        preds.forEach(p => {
-            if (p.probability > bestProb) {
-                bestProb = p.probability;
-                bestClass = p.className;
-            }
-        });
-
-        document.getElementById("status").innerText =
-            bestClass + " " + (bestProb * 100).toFixed(1) + "%";
-
-        sendToApp(bestClass + " " + (bestProb * 100).toFixed(1) + "%");
-
-    } catch (e) {
-        sendToApp("ERROR: PREDICTION FAILED");
-    }
-}
 
 window.addEventListener("DOMContentLoaded", loadModel);
 </script>
