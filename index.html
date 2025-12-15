@@ -1,31 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Potato Leaf Disease Detection</title>
+<meta charset="UTF-8">
+<title>WAITING</title>
 
-    <!-- TensorFlow.js MUST load first -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
-    <!-- Teachable Machine image library -->
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-
-    <link rel="stylesheet" href="style.css" />
+<style>
+body { font-family: Arial; text-align: center; }
+img { width: 250px; margin-top: 20px; }
+</style>
 </head>
 
 <body>
-    <h1>Potato Leaf Disease Detection</h1>
 
-    <input type="file" id="imageInput" accept="image/*" />
-    <br><br>
+<h2>Teachable Machine – App Inventor</h2>
+<div id="status">Loading model...</div>
+<img id="preview"/>
 
-    <img id="preview" width="300" alt="Preview image" />
-    <br><br>
+<script>
+let model;
 
-    <h2 id="label">Waiting for image…</h2>
+// 🔹 SEND MESSAGE BACK TO APP INVENTOR (100% reliable)
+function sendToApp(msg) {
+    console.log("SEND:", msg);
+    document.title = "RESULT:" + msg;
+}
 
-    <!-- Load your classifier script -->
-    <script src="script.js"></script>
+// 🔹 LOAD MODEL
+async function loadModel() {
+    try {
+        const modelURL = "https://pepalakrotiriou.github.io/potatocare/model/model.json";
+        const metadataURL = "https://pepalakrotiriou.github.io/potatocare/model/metadata.json";
+
+        model = await tmImage.load(modelURL, metadataURL);
+        document.getElementById("status").innerText = "Model loaded";
+        sendToApp("MODEL LOADED");
+
+    } catch (e) {
+        document.getElementById("status").innerText = "MODEL LOAD ERROR";
+        sendToApp("ERROR: MODEL LOAD FAILED");
+    }
+}
+
+// 🔹 RECEIVE IMAGE FROM APP INVENTOR
+window.fromAppInventor = function(base64) {
+    console.log("Image received from App Inventor");
+
+    const img = document.getElementById("preview");
+    img.src = "data:image/jpeg;base64," + base64;
+
+    img.onload = () => predict(img);
+};
+
+// 🔹 RUN PREDICTION
+async function predict(img) {
+    if (!model) {
+        sendToApp("ERROR: MODEL NOT READY");
+        return;
+    }
+
+    try {
+        const preds = await model.predict(img);
+
+        let bestClass = "";
+        let bestProb = 0;
+
+        preds.forEach(p => {
+            if (p.probability > bestProb) {
+                bestProb = p.probability;
+                bestClass = p.className;
+            }
+        });
+
+        document.getElementById("status").innerText =
+            bestClass + " " + (bestProb * 100).toFixed(1) + "%";
+
+        sendToApp(bestClass + " " + (bestProb * 100).toFixed(1) + "%");
+
+    } catch (e) {
+        sendToApp("ERROR: PREDICTION FAILED");
+    }
+}
+
+window.addEventListener("DOMContentLoaded", loadModel);
+</script>
+
 </body>
 </html>
