@@ -1,53 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>WAITING</title>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Potato Leaf Disease Detection</title>
+
+    <!-- TensorFlow.js MUST load first -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+
+    <!-- Teachable Machine image library -->
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-<h3>Teachable Machine</h3>
-<img id="img" width="250">
+    <h1>Potato Leaf Disease Detection</h1>
 
-<script>
-let model;
+    <input type="file" id="imageInput" accept="image/*" />
+    <br><br>
 
-// SEND RESULT BACK
-function sendResult(msg) {
-    if (window.AppInventor) {
-        AppInventor.setWebViewString(msg);
-    }
-    document.title = msg;
-}
+    <img id="preview" width="300" alt="Preview image" />
+    <br><br>
 
-// LOAD MODEL
-async function loadModel() {
-    model = await tmImage.load(
-        "https://pepalakrotiriou.github.io/potatocare/model/model.json",
-        "https://pepalakrotiriou.github.io/potatocare/model/metadata.json"
-    );
-    sendResult("MODEL LOADED");
-}
+    <h2 id="label">Waiting for image…</h2>
 
-// RECEIVE BASE64 FROM APP INVENTOR
-async function receiveFromAppInventor() {
-    if (!window.AppInventor) return;
-
-    const base64 = AppInventor.getWebViewString();
-    const img = document.getElementById("img");
-
-    img.src = "data:image/jpeg;base64," + base64;
-
-    img.onload = async () => {
-        const preds = await model.predict(img);
-
-        let best = preds.reduce((a,b)=>a.probability>b.probability?a:b);
-        sendResult(best.className + " " + (best.probability*100).toFixed(1) + "%");
-    };
-}
-
-window.addEventListener("DOMContentLoaded", loadModel);
-</script>
+    <!-- Load your classifier script -->
+    <script src="script.js"></script>
 </body>
 </html>
