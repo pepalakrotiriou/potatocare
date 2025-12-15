@@ -1,131 +1,140 @@
-let model;
-let maxPredictions;
+// ===============================
+// Potato Leaf Disease Detection
+// Fully rewritten, robust version
+// ===============================
 
+let model = null;
+let maxPredictions = 0;
+
+// -------------------------------
+// Load Teachable Machine model
+// -------------------------------
 async function loadModel() {
-    // Try BOTH locations (model/ folder and root)
-    const possiblePaths = [
-        "https://pepalakrotiriou.github.io/potatocare/model/model.json"
-    ];
-    
-    let modelLoaded = false;
-    
-    for (const baseURL of possiblePaths) {
-        const modelURL = baseURL;
-        const metadataURL = baseURL.replace('model.json', 'metadata.json');
-        
-        console.log(`Trying to load model from: ${modelURL}`);
-        
-        try {
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
-            console.log(`Model loaded from: ${modelURL}`);
-            console.log(`Model has ${maxPredictions} classes`);
-            
-            // Get class names
-            const classNames = model.getClassLabels();
-            console.log("Class names:", classNames);
-            
-            document.getElementById("label").innerText = `Model ready (${maxPredictions} classes). Upload an image.`;
-            modelLoaded = true;
-            break;
-        } catch (err) {
-            console.log(`Failed from ${modelURL}:`, err.message);
-        }
-    }
-    
-    if (!modelLoaded) {
-        console.error("All model loading attempts failed");
-        document.getElementById("label").innerText = "Error: Could not load model from any location!";
+    const modelURL = "https://pepalakrotiriou.github.io/potatocare/model/model.json";
+    const metadataURL = "https://pepalakrotiriou.github.io/potatocare/model/metadata.json";
+
+    try {
+        console.log("Loading model...");
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        console.log("Model loaded successfully");
+        console.log("Number of classes:", maxPredictions);
+        console.log("Class labels:", model.getClassLabels());
+
+        document.getElementById("label").innerText =
+            `Model ready (${maxPredictions} classes). Choose an image.`;
+    } catch (error) {
+        console.error("Model loading failed:", error);
+        document.getElementById("label").innerText = "ERROR: Model failed to load";
         document.title = "ERROR";
     }
 }
 
-async function predict(imgElement) {
+// -------------------------------
+// Predict image
+// -------------------------------
+async function predict(img) {
     if (!model) {
-        document.getElementById("label").innerText = "Model not loaded!";
-        document.title = "ERROR";
+        document.getElementById("label").innerText = "Model not loaded";
+        return;
+    }
+
+    // Safety check: image must be valid
+    if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+        document.getElementById("label").innerText = "Invalid image";
+        console.error("Invalid image dimensions");
         return;
     }
 
     try {
-        // Make prediction
-        const prediction = await model.predict(imgElement);
-        
-        // DEBUG: Log everything
-        console.log("=== PREDICTION RESULTS ===");
-        console.log("Raw prediction array:", prediction);
-        
-        let resultHTML = "<h3>Prediction Results:</h3>";
+        console.log("Running prediction...");
+        const predictions = await model.predict(img);
+
         let bestClass = "Unknown";
         let bestProb = 0;
-        
-        // Check each class
-        for (let i = 0; i < prediction.length; i++) {
-            const item = prediction[i];
-            console.log(`Class ${i}:`, item);
-            
-            const className = item.className || `Class ${i}`;
-            const probability = Number(item.probability);
-            
-            console.log(`${className}: ${probability} (${probability * 100}%)`);
-            
-            // Check if probability is valid
-            if (isNaN(probability)) {
-                console.error(`Probability for ${className} is NaN!`);
-                resultHTML += `<div style="color: red">${className}: INVALID (NaN)</div>`;
-            } else {
-                const percentage = (probability * 100).toFixed(2);
-                resultHTML += `<div>${className}: ${percentage}%</div>`;
-                
-                if (probability > bestProb) {
-                    bestProb = probability;
-                    bestClass = className;
-                }
+
+        let html = "<h3>Prediction Results</h3>";
+
+        predictions.forEach(p => {
+            const percent = (p.probability * 100).toFixed(2);
+            html += `<div>${p.className}: ${percent}%</div>`;
+
+            if (p.probability > bestProb) {
+                bestProb = p.probability;
+                bestClass = p.className;
             }
+        });
+
+        document.getElementById("label").innerHTML = html;
+        document.title = bestClass;
+
+        console.log("Best result:", bestClass, bestProb);
+
+        // Send result to MIT App Inventor (if available)
+        try {
+            AppInventor.setWebViewString(
+                `${bestClass}: ${(bestProb * 100).toFixed(2)}%`
+            );
+        } catch (e) {
+            console.log("AppInventor interface not available");
         }
-        
-        // Display results
-        document.getElementById("label").innerHTML = resultHTML;
-        
-        if (bestProb > 0) {
-            const displayText = `${bestClass} (${(bestProb * 100).toFixed(1)}%)`;
-            console.log("Best result:", displayText);
-            document.title = bestClass;
-            // SEND RESULT BACK TO APP INVENTOR
-            try {
-                AppInventor.setWebViewString(bestClass + ": " + (bestProb * 100).toFixed(2) + "%");
-            } catch(e) {
-                console.log("AppInventor interface not available");
-            }
-        } else {
-            console.error("No valid probabilities found!");
-            document.title = "ERROR";
-        }
-        
-    } catch (err) {
-        console.error("Prediction error:", err);
-        document.getElementById("label").innerHTML = `<div style="color: red">Prediction error: ${err.message}</div>`;
+
+    } catch (error) {
+        console.error("Prediction error:", error);
+        document.getElementById("label").innerText = "Prediction failed";
         document.title = "ERROR";
     }
 }
 
-// File upload handler
-document.getElementById("imageInput").addEventListener("change", function (evt) {
-    const file = evt.target.files[0];
-    const img = document.getElementById("preview");
-
+// -------------------------------
+// Handle file upload (browser)
+// -------------------------------
+document.getElementById("imageInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
     if (!file) return;
 
-    img.src = URL.createObjectURL(file);
-    document.getElementById("label").innerText = "Processing image...";
+    const img = document.getElementById("preview");
 
-    img.onload = function () {
+    document.getElementById("label").innerText = "Loading image...";
+
+    // IMPORTANT: attach handlers BEFORE src
+    img.onload = () => {
+        console.log("Image loaded:", img.naturalWidth, img.naturalHeight);
         predict(img);
     };
+
+    img.onerror = () => {
+        console.error("Image failed to load");
+        document.getElementById("label").innerText = "Image load error";
+    };
+
+    img.src = URL.createObjectURL(file);
 });
 
-// Load model when page loads
-window.addEventListener('DOMContentLoaded', (event) => {
-    console.log("Page loaded, loading model...");
+// -------------------------------
+// Optional: receive Base64 image from MIT App Inventor
+// -------------------------------
+function loadImageFromAI(base64) {
+    const img = document.getElementById("preview");
+
+    document.getElementById("label").innerText = "Loading image from app...";
+
+    img.onload = () => {
+        console.log("Base64 image loaded");
+        predict(img);
+    };
+
+    img.onerror = () => {
+        document.getElementById("label").innerText = "Image load error (AI)";
+    };
+
+    img.src = "data:image/jpeg;base64," + base64;
+}
+
+// -------------------------------
+// Init
+// -------------------------------
+window.addEventListener("DOMContentLoaded", () => {
     loadModel();
 });
